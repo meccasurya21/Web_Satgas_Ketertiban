@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login OSIS / Admin</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet" />
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="height: 100vh;">
+
+  <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
+    <h4 class="text-center mb-3">Login Osis / Admin</h4>
+
+    <div id="alert" class="alert alert-danger d-none"></div>
+
+    <form id="loginForm">
+      <div class="mb-2">
+        <input type="email" id="email" class="form-control" placeholder="Email" required />
+      </div>
+      <div class="mb-3 position-relative">
+        <input type="password" id="password" class="form-control" placeholder="Password" required />
+        <i id="togglePassword" class="bi bi-eye position-absolute" style="top: 50%; right: 10px; transform: translateY(-50%); cursor: pointer;"></i>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Masuk</button>
+    </form>
+
+    <hr />
+    <div class="text-center">
+      <a href="register.html">Belum punya akun? Daftar OSIS</a>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyAlD-GeYrt2M2dVozbYlDbkVamT4hyj0BQ",
+      authDomain: "pelanggaran-siswa-smk.firebaseapp.com",
+      databaseURL: "https://pelanggaran-siswa-smk-default-rtdb.firebaseio.com",
+      projectId: "pelanggaran-siswa-smk",
+      storageBucket: "pelanggaran-siswa-smk.appspot.com",
+      messagingSenderId: "337277811473",
+      appId: "1:337277811473:web:4604c10b5d4f708347eab0",
+      measurementId: "G-WWRW37FTVN"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    const alertBox = document.getElementById("alert");
+    const form = document.getElementById("loginForm");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      alertBox.classList.add("d-none");
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+
+      try {
+        const result = await auth.signInWithEmailAndPassword(email, password);
+        const uid = result.user.uid;
+
+        const snapshot = await db.ref("users/" + uid).get();
+        if (!snapshot.exists()) return showError("Akun belum terdaftar di database.");
+
+        const user = snapshot.val();
+        if (user.status !== "aktif") return showError("Akun Anda belum disetujui oleh admin.");
+
+        // Simpan ke localStorage
+        localStorage.setItem("uid", uid);
+        localStorage.setItem("role", user.role);
+        localStorage.setItem("nama", user.nama || "Tanpa Nama");
+
+        // Absensi login
+        const now = new Date();
+        const today = now.toLocaleDateString("id-ID");
+        const jam = now.toTimeString().split(" ")[0];
+        await db.ref(`absensi/${uid}/${today}`).update({ login: jam });
+
+        // Redirect sesuai role
+        if (user.role === "admin") {
+          window.location.href = "redirect.html"; // Pilihan admin
+        } else if (user.role === "osis") {
+          window.location.href = "dashboard.html"; // Langsung ke dashboard
+        } else {
+          showError("Role pengguna tidak valid.");
+        }
+
+      } catch (err) {
+        console.error(err);
+        showError("Email atau password salah.");
+      }
+    });
+
+    function showError(msg) {
+      alertBox.textContent = msg;
+      alertBox.classList.remove("d-none");
+    }
+
+    // Toggle Password
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordField = document.getElementById("password");
+    togglePassword.addEventListener("click", () => {
+      const isVisible = passwordField.type === "text";
+      passwordField.type = isVisible ? "password" : "text";
+      togglePassword.classList.toggle("bi-eye");
+      togglePassword.classList.toggle("bi-eye-slash");
+    });
+  </script>
+</body>
+</html>
