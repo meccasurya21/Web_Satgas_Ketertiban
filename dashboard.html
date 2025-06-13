@@ -441,6 +441,30 @@
       });
       doc.save("pelanggaran_siswa.pdf");
     });
+    // Tombol Logout
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  const now = new Date();
+  const today = now.toLocaleDateString("id-ID");
+  const jam = now.toTimeString().split(" ")[0];
+  const role = localStorage.getItem("role") || "unknown";
+  const nama = localStorage.getItem("nama") || "pengguna";
+
+  // Simpan log aktivitas logout (opsional, jika punya ref log)
+  const logRef = ref(db, "log");
+  await push(logRef, {
+    nama,
+    role,
+    aksi: "Logout",
+    waktu: `${today} ${jam}`,
+  });
+
+  // Hapus localStorage dan redirect
+  localStorage.removeItem("role");
+  localStorage.removeItem("nama");
+  localStorage.removeItem("uid");
+  window.location.href = "login.html";
+});
+
   </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </body>
